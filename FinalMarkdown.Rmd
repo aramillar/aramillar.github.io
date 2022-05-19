@@ -1,0 +1,632 @@
+---
+title: "Markdown für Stadtsoziologie"
+author: "Jonas"
+date: "9 5 2022"
+output:
+  html_document:
+    theme: journal
+    toc: yes
+    toc_float: yes
+  pdf_document:
+    toc: yes
+  word_document:
+    toc: yes
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Datenaufbereitung
+
+## 1. Packages installieren und Arbeitsordner definieren
+
+```{r Pakete-und-Arbeitsordner, message=FALSE, warning=FALSE, results='hide'}
+
+install.packages("tidyverse", repos = "http://cran.us.r-project.org")
+library(tidyverse)
+install.packages("readr", repos = "http://cran.us.r-project.org")
+library(readr)
+install.packages("geojsonsf", repos = "http://cran.us.r-project.org")
+library(geojsonsf)
+install.packages("osmdata", repos = "http://cran.us.r-project.org")
+library(osmdata)
+install.packages("sf", repos = "http://cran.us.r-project.org")
+library(sf)
+
+
+#### Hier unkommentiert, da jeweils auf den PC anzupassen ist, wo die Daten liegen
+#setwd("d:/stadtsoz_karlsruhe/neosatz")
+
+```
+
+
+## 2. Datensätze einlesen, bearbeiten & öffnen
+
+```{r Daten-einlesen, message=FALSE, warning=FALSE, results='hide'}
+
+migration <- read_csv("D:/stadtsoz_karlsruhe/neosatz/migration.csv")
+colnames(migration)[4] <- "DeuMitMigh"
+colnames(migration)[5] <- "Ausländer"
+u18mig <- read.csv("D:/stadtsoz_karlsruhe/neosatz/migration-unter-18-jahrige-mit-migrationshintergrund-nach-art.csv")
+colnames(u18mig)[3] <- "U18_Personen"
+colnames(u18mig)[4] <- "U18_DeuMitMigh"
+colnames(u18mig)[5] <- "U18_Ausländer"
+gesamt <- read.csv("D:/stadtsoz_karlsruhe/neosatz/klassenstufe4-insgesamt.csv")
+colnames(gesamt)[3] <- "Übergänge_gesamt"
+gymn <- read.csv("D:/stadtsoz_karlsruhe/neosatz/gymnasien.csv")
+colnames(gymn)[3] <- "Gymnasium"
+geme <- read.csv("D:/stadtsoz_karlsruhe/neosatz/gemeinschaftsschulen.csv")
+colnames(geme)[3] <- "Gemeinschaftsschule"
+real <- read.csv("D:/stadtsoz_karlsruhe/neosatz/realschulen.csv")
+colnames(real)[3] <- "Realschule"
+haup <- read.csv("D:/stadtsoz_karlsruhe/neosatz/haupt-werkrealschulen.csv")
+colnames(haup)[3] <- "HauptWerkrealschule"
+
+view(migration)
+view(u18mig)
+view(gesamt)
+view(gymn)
+view(geme)
+view(real)
+view(haup)
+```
+
+
+## 3. Datensätze vereinen
+
+Version 1: Da Gemeinschaftsschulen erst ab 2012 -> alle folgendenen Datensätze erst ab 2012 aufgenommen:
+```{r Datensatz-merge, message=FALSE, warning=FALSE, results='hide'}
+mig2012 <- filter(migration, Jahr >= 2012)
+u18mig2012 <- filter(u18mig, Jahr >= 2012)
+gesamt2012 <- filter(gesamt, Jahr >=2012)
+gym2012 <- filter(gymn, Jahr >= 2012)
+gem2012 <- filter(geme, Jahr >= 2012)
+rea2012 <- filter(real, Jahr >= 2012)
+hau2012 <- filter(haup, Jahr >= 2012)
+
+all_data2012 <- gesamt2012 %>%
+  left_join(gym2012, by= c('Stadtteil', 'Jahr')) %>% 
+  left_join(gem2012, by= c('Stadtteil', 'Jahr')) %>% 
+  left_join(rea2012, by= c('Stadtteil', 'Jahr')) %>% 
+  left_join(hau2012, by= c('Stadtteil', 'Jahr')) %>% 
+  left_join(mig2012, by= c('Stadtteil', 'Jahr')) %>% 
+  left_join(u18mig2012, by= c('Stadtteil', 'Jahr'))
+```
+
+Vereinten 2012-2021 Datensatz anzeigen lassen:
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+view(all_data2012)
+```
+
+
+################################################################
+Version 2: Ohne Gemeinschaftsschulen und Daten ab 2010:
+```{r, message=FALSE, warning=FALSE, results='hide'}
+mig2010 <- filter(migration, Jahr >= 2010)
+u18mig2010 <- filter(u18mig, Jahr >= 2010)
+gesamt2010 <- filter(gesamt, Jahr >=2010)
+gym2010 <- filter(gymn, Jahr >= 2010)
+rea2010 <- filter(real, Jahr >= 2010)
+hau2010 <- filter(haup, Jahr >= 2010)
+
+
+all_data2010 <- gesamt2010 %>%
+  left_join(gym2010, by= c('Stadtteil', 'Jahr')) %>%  
+  left_join(rea2010, by= c('Stadtteil', 'Jahr')) %>% 
+  left_join(hau2010, by= c('Stadtteil', 'Jahr')) %>% 
+  left_join(mig2010, by= c('Stadtteil', 'Jahr'))
+```
+##################################################
+
+Vereinten 2010-2021 Datensatz anzeigen lassen:
+
+```{r, message=FALSE, warning=FALSE, results='hide'}
+view(all_data2010)
+```
+
+
+
+
+# Korrelationen & Zusammenhänge:
+
+
+## 1. Nur 2021 Zusammenhänge
+
+
+### 1.1. Aus 2012er Datensatz das Jahr 2021 filtern:
+```{r}
+Kor2021 <- filter(all_data2012, Jahr == 2021)
+```
+
+
+
+### 1.2. Diverse Zusammenhänge mit cor() Befehl (= Pearson) 
+
+
+ -> über ganz Karlsruhe:
+ 
+ 
+
+Zusammenhang zwischen
+Anteil der Schülerinnen und Schüler, die 2021 auf ein Gymnasium wechseln 
+und
+der Anzahl Personen mit Migrationshintergrund 
+in ganz Karlsruhe":
+
+```{r}
+cor(Kor2021$Gymnasium, Kor2021$Personen, use = "complete.obs",
+    method = "pearson")
+#missings rausschmeissen mit complete.obs
+```
+Visuelle Darstellung
+```{r message=FALSE, warning=FALSE}
+
+
+ggplot(Kor2021, aes(x=Kor2021$Gymnasium, y=Kor2021$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+
+```
+
+
+
+Zusammenhang zwischen
+Anteil der Schülerinnen und Schüler, die 2021 auf eine Gemeinschaftsschule wechseln 
+und
+der Anzahl Personen mit Migrationshintergrund 
+in ganz Karlsruhe:
+
+
+```{r}
+cor(Kor2021$Gemeinschaftsschule , Kor2021$Personen, use = "complete.obs",
+    method = "pearson")
+```
+Visuelle Darstellung
+```{r message=FALSE, warning=FALSE}
+
+
+ggplot(Kor2021, aes(x=Kor2021$Gemeinschaftsschule, y=Kor2021$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+
+```
+
+
+Zusammenhang zwischen
+Anteil der Schülerinnen und Schüler, die 2021 auf eine Realschule wechseln 
+und 
+der Anzahl Personen mit Migrationshintergrund 
+in ganz Karlsruhe:
+
+
+```{r}
+cor(Kor2021$Realschule , Kor2021$Personen, use = "complete.obs",
+    method = "pearson")
+```
+
+Visuelle Darstellung
+```{r message=FALSE, warning=FALSE}
+
+
+ggplot(Kor2021, aes(x=Kor2021$Realschule, y=Kor2021$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+
+```
+
+Zusammenhang zwischen
+Anteil der Schülerinnen und Schüler, die 2021 auf eine Haupt-/Werkrealschule wechseln 
+und 
+der Anzahl Personen mit Migrationshintergrund 
+in ganz Karlsruhe:
+
+
+```{r}
+cor(Kor2021$HauptWerkrealschule, Kor2021$Personen, use = "complete.obs",
+    method = "pearson")
+```
+
+Visuelle Darstellung
+```{r message=FALSE, warning=FALSE}
+
+
+ggplot(Kor2021, aes(x=Kor2021$HauptWerkrealschule, y=Kor2021$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+
+```
+
+
+
+## 2. Stadtteilbetrachtung
+
+-> einzelne Stadtteile über Jahre:
+
+
+### NEUREUT (Vorstadt, am Stadtrand Beispiel)
+
+Zusammenhang zwischen
+Anteil der Schülerinnen und Schüler, die in von 2012 bis 2021 auf ... wechseln 
+und 
+der Anzahl Personen mit Migrationshintergrund 
+in Neureut:
+
+
+```{r}
+neureut_all <- filter(all_data2012, Stadtteil == "Neureut")
+
+cor(neureut_all$Gymnasium , neureut_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(neureut_all$Gemeinschaftsschule , neureut_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(neureut_all$Realschule , neureut_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(neureut_all$HauptWerkrealschule , neureut_all$Personen, use = "complete.obs",
+    method = "pearson")
+```
+
+Visuelle Darstellung
+```{r message=FALSE, warning=FALSE}
+
+ggplot(neureut_all, aes(x=neureut_all$Gymnasium, y=neureut_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(neureut_all, aes(x=neureut_all$Gemeinschaftsschule, y=neureut_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(neureut_all, aes(x=neureut_all$Realschule, y=neureut_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(neureut_all, aes(x=neureut_all$HauptWerkrealschule, y=neureut_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+
+```
+
+### INNENSTADT-WEST (höchste Anzahl Straftaten 2021)
+
+Zusammenhang zwischen
+Anteil der Schülerinnen und Schüler, die in von 2012 bis 2021 auf ..... wechseln 
+und 
+der Anzahl Personen mit Migrationshintergrund 
+in der Innenstadt-West:
+
+
+```{r}
+innenwest_all <- filter(all_data2012, Stadtteil == "Innenstadt-West")
+
+cor(innenwest_all$Gymnasium , innenwest_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(innenwest_all$Gemeinschaftsschule , innenwest_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(innenwest_all$Realschule , innenwest_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(innenwest_all$HauptWerkrealschule , innenwest_all$Personen, use = "complete.obs",
+    method = "pearson")
+```
+
+Visuelle Darstellung
+```{r message=FALSE, warning=FALSE}
+
+ggplot(innenwest_all, aes(x=innenwest_all$Gymnasium, y=innenwest_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(innenwest_all, aes(x=innenwest_all$Gemeinschaftsschule, y=innenwest_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(innenwest_all, aes(x=innenwest_all$Realschule, y=innenwest_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(innenwest_all, aes(x=innenwest_all$HauptWerkrealschule, y=innenwest_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+
+```
+
+### DURLACH (höchste Anzahl an Einwohner und auch Personen mit Migrationshintergrund)
+
+Zusammenhang zwischen
+Anteil der Schülerinnen und Schüler, die in von 2012 bis 2021 auf ..... wechseln 
+und 
+der Anzahl Personen mit Migrationshintergrund 
+in der Durlach:
+
+
+```{r}
+Durlach_all <- filter(all_data2012, Stadtteil == "Durlach")
+
+cor(Durlach_all$Gymnasium , Durlach_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(Durlach_all$Gemeinschaftsschule , Durlach_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(Durlach_all$Realschule , Durlach_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(Durlach_all$HauptWerkrealschule , Durlach_all$Personen, use = "complete.obs",
+    method = "pearson")
+```
+
+Visuelle Darstellung
+```{r message=FALSE, warning=FALSE}
+
+ggplot(Durlach_all, aes(x=Durlach_all$Gymnasium, y=Durlach_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(Durlach_all, aes(x=Durlach_all$Gemeinschaftsschule, y=Durlach_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(Durlach_all, aes(x=Durlach_all$Realschule, y=Durlach_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(Durlach_all, aes(x=Durlach_all$HauptWerkrealschule, y=Durlach_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+
+```
+
+
+
+### INNENSTADT-OST (Höchster Migrantenanteil 48,3%)
+
+Zusammenhang zwischen
+Anteil der Schülerinnen und Schüler, die in von 2012 bis 2021 auf ..... wechseln 
+und 
+der Anzahl Personen mit Migrationshintergrund 
+in der Innenstadt-Ost:
+
+
+```{r}
+innenost_all <- filter(all_data2012, Stadtteil == "Innenstadt-Ost")
+
+cor(innenost_all$Gymnasium , innenost_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(innenost_all$Gemeinschaftsschule , innenost_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(innenost_all$Realschule , innenost_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(innenost_all$HauptWerkrealschule , innenost_all$Personen, use = "complete.obs",
+    method = "pearson")
+```
+
+
+Visuelle Darstellung
+```{r message=FALSE, warning=FALSE}
+
+ggplot(innenost_all, aes(x=innenost_all$Gymnasium, y=innenost_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(innenost_all, aes(x=innenost_all$Gemeinschaftsschule, y=innenost_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(innenost_all, aes(x=innenost_all$Realschule, y=innenost_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(innenost_all, aes(x=innenost_all$HauptWerkrealschule, y=innenost_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+
+```
+
+
+
+### HOHENWETTERSBACH (geringster Migrantenanteil 12,7%)
+
+Zusammenhang zwischen
+Anteil der Schülerinnen und Schüler, die in von 2012 bis 2021 auf ..... wechseln 
+und 
+der Anzahl Personen mit Migrationshintergrund 
+in Hohenwettersbach:
+
+
+```{r}
+hohenw_all <- filter(all_data2012, Stadtteil == "Hohenwettersbach")
+
+cor(hohenw_all$Gymnasium , hohenw_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(hohenw_all$Gemeinschaftsschule , hohenw_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(hohenw_all$Realschule , hohenw_all$Personen, use = "complete.obs",
+    method = "pearson")
+
+cor(hohenw_all$HauptWerkrealschule , hohenw_all$Personen, use = "complete.obs",
+    method = "pearson")
+```
+
+Visuelle Darstellung
+```{r message=FALSE, warning=FALSE}
+
+ggplot(hohenw_all, aes(x=hohenw_all$Gymnasium, y=hohenw_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(hohenw_all, aes(x=hohenw_all$Gemeinschaftsschule, y=hohenw_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(hohenw_all, aes(x=hohenw_all$Realschule, y=hohenw_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+ggplot(hohenw_all, aes(x=hohenw_all$HauptWerkrealschule, y=hohenw_all$Personen)) + 
+  geom_point() +
+  geom_smooth(method=lm)
+
+
+```
+
+
+
+# Karten
+
+## 1. Generelle Codierung
+
+
+```{r}
+KA_st <- c("Daxlanden","Grünwinkel","Mühlburg","Oberreut","Weststadt","Innenstadt-Ost","Innenstadt-West",
+           "Durlach","Grötzingen","Hagsfeld","Oststadt","Rintheim", "Knielingen","Neureut","Nordstadt",
+           "Nordweststadt","Waldstadt","Beiertheim-Bulach","Rüppurr","Südstadt","Südweststadt","Weiherfeld-Dammerstock",
+           "Grünwettersbach","Hohenwettersbach","Palmbach","Stupferich","Wolfartsweier")
+
+KA_sf <- getbb(paste("Karlsruhe", KA_st[1], sep = "-"),
+               format_out = "sf_polygon")
+for (i in 2:length(KA_st)) {
+  KA_sf <- rbind(KA_sf,
+                 getbb(paste("Karlsruhe", KA_st[i], sep = "-"),
+                       format_out = "sf_polygon"))
+}
+KA_sf$place <- KA_st
+
+colnames(KA_sf)[2] <- "Stadtteil"
+
+view(KA_st)
+
+
+KA_map <- full_join(Kor2021, KA_sf, copy = TRUE)
+```
+
+## 2. Karten
+
+### 2.1 Menschen mit Migrationshintergrund in Karlsruhe 2021
+
+```{r}
+
+ggplot(KA_map) +
+  aes(fill = Personen,
+      geometry = geometry) +
+  geom_sf(size = 0.2) +
+  theme_void() +
+  theme(legend.position = "bottom", 
+        legend.direction = "horizontal") +
+  scale_fill_distiller(trans = "reverse") +
+  labs(title = "Abb. 1: Menschen mit Migrationshintergrund in Karlsruhe 2021",
+       fill = "Anzahl")
+
+colnames(KA_map)[11] <- "U18_Personen"
+  
+ggplot(KA_map) +
+  aes(fill = U18_Personen,
+      geometry = geometry) +
+  geom_sf(size = 0.2) +
+  theme_void() +
+  theme(legend.position = "bottom", 
+        legend.direction = "horizontal") +
+  scale_fill_distiller(trans = "reverse") +
+  labs(title = "Abb. 2: Menschen unter 18 Jahren mit Migrationshintergrund in Karlsruhe 2021",
+       fill = "Anzahl")
+```
+
+
+### 2.2 Übergänge auf weiterführende Schulen in Karlsruher Stadtteilen nach Schulart
+
+
+```{r}
+
+# Übergänge gesamt
+
+colnames(KA_map)[3] <- "Übergänge_gesamt"
+
+ggplot(KA_map) +
+  aes(fill = Übergänge_gesamt,
+      geometry = geometry) +
+  geom_sf(size = 0.2) +
+  theme_void() +
+  theme(legend.position = "bottom", 
+        legend.direction = "horizontal") +
+  scale_fill_distiller(trans = "reverse") +
+  labs(title = "Abb. 3: Übergänge auf weiterführende Schulen in Karlsruhe 2021",
+       fill = "Anzahl")
+
+# Gymnasium
+
+ggplot(KA_map) +
+  aes(fill = Gymnasium,
+      geometry = geometry) +
+  geom_sf(size = 0.2) +
+  theme_void() +
+  theme(legend.position = "bottom", 
+        legend.direction = "horizontal") +
+  scale_fill_distiller(trans = "reverse") +
+  labs(title = "Abb. 2: Übergänge auf die Gymnasien in Karlsruhe 2021",
+       fill = "Anzahl")
+
+
+
+# Gemeinschaftsschule
+
+ggplot(KA_map) +
+  aes(fill = Gemeinschaftsschule,
+      geometry = geometry) +
+  geom_sf(size = 0.2) +
+  theme_void() +
+  theme(legend.position = "bottom", 
+        legend.direction = "horizontal") +
+  scale_fill_distiller(trans = "reverse") +
+  labs(title = "Abb. 2: Übergänge auf die Gesamtschulen in Karlsruhe 2021",
+       fill = "Anzahl")
+
+
+
+# Realschule
+
+ggplot(KA_map) +
+  aes(fill = Realschule,
+      geometry = geometry) +
+  geom_sf(size = 0.2) +
+  theme_void() +
+  theme(legend.position = "bottom", 
+        legend.direction = "horizontal") +
+  scale_fill_distiller(trans = "reverse") +
+  labs(title = "Abb. 2: Übergänge auf die Realschulen in Karlsruhe 2021",
+       fill = "Anzahl")
+
+
+# Haupt-/Werkrealschule
+
+ggplot(KA_map) +
+  aes(fill = HauptWerkrealschule,
+      geometry = geometry) +
+  geom_sf(size = 0.2) +
+  theme_void() +
+  theme(legend.position = "bottom", 
+        legend.direction = "horizontal") +
+  scale_fill_distiller(trans = "reverse") +
+  labs(title = "Abb. 2: Übergänge auf die Haupt-/Werkrealschulen in Karlsruhe 2021",
+       fill = "Anzahl")
+```
+
