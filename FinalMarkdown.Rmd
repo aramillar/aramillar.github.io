@@ -1,6 +1,6 @@
 ---
 title: "Markdown für Stadtsoziologie"
-author: "Jonas"
+author: "J.M."
 date: "9 5 2022"
 output:
   html_document:
@@ -14,9 +14,6 @@ output:
 ---
 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 # Datenaufbereitung
 
@@ -46,22 +43,22 @@ library(sf)
 
 ```{r Daten-einlesen, message=FALSE, warning=FALSE, results='hide'}
 
-migration <- read_csv("D:/stadtsoz_karlsruhe/neosatz/migration.csv")
+migration <- read_csv("migration.csv")
 colnames(migration)[4] <- "DeuMitMigh"
 colnames(migration)[5] <- "Ausländer"
-u18mig <- read.csv("D:/stadtsoz_karlsruhe/neosatz/migration-unter-18-jahrige-mit-migrationshintergrund-nach-art.csv")
+u18mig <- read.csv("migration-unter-18-jahrige-mit-migrationshintergrund-nach-art.csv")
 colnames(u18mig)[3] <- "U18_Personen"
 colnames(u18mig)[4] <- "U18_DeuMitMigh"
 colnames(u18mig)[5] <- "U18_Ausländer"
-gesamt <- read.csv("D:/stadtsoz_karlsruhe/neosatz/klassenstufe4-insgesamt.csv")
+gesamt <- read.csv("klassenstufe4-insgesamt.csv")
 colnames(gesamt)[3] <- "Übergänge_gesamt"
-gymn <- read.csv("D:/stadtsoz_karlsruhe/neosatz/gymnasien.csv")
+gymn <- read.csv("gymnasien.csv")
 colnames(gymn)[3] <- "Gymnasium"
-geme <- read.csv("D:/stadtsoz_karlsruhe/neosatz/gemeinschaftsschulen.csv")
+geme <- read.csv("gemeinschaftsschulen.csv")
 colnames(geme)[3] <- "Gemeinschaftsschule"
-real <- read.csv("D:/stadtsoz_karlsruhe/neosatz/realschulen.csv")
+real <- read.csv("realschulen.csv")
 colnames(real)[3] <- "Realschule"
-haup <- read.csv("D:/stadtsoz_karlsruhe/neosatz/haupt-werkrealschulen.csv")
+haup <- read.csv("haupt-werkrealschulen.csv")
 colnames(haup)[3] <- "HauptWerkrealschule"
 
 view(migration)
