@@ -34,7 +34,7 @@ library(sf)
 
 
 #### Hier unkommentiert, da jeweils auf den PC anzupassen ist, wo die Daten liegen
-#setwd("d:/stadtsoz_karlsruhe/neosatz")
+#setwd("...")
 
 ```
 
